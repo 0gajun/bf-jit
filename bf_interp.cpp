@@ -1,12 +1,10 @@
 #include "utils.h"
+#include "opt1_interp.h"
+#include "simple_interp.h"
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <vector>
-
-struct Program {
-    std::string instructions;
-};
 
 Program parse_from_stream(std::istream& stream) {
     Program program;
@@ -23,82 +21,9 @@ Program parse_from_stream(std::istream& stream) {
     return program;
 }
 
-constexpr int MEMORY_SIZE = 30000;
-
-void simpleinterp(const Program& p, bool verbose) {
-    // Initialize state
-    std::vector<uint8_t> memory(MEMORY_SIZE, 0);
-    size_t pc = 0;
-    size_t dataptr = 0;
-
-    while (pc < p.instructions.size()) {
-        char insn = p.instructions[pc];
-        switch (insn) {
-            case '>':
-                dataptr++;
-                break;
-            case '<':
-                dataptr--;
-                break;
-            case '+':
-                memory[dataptr]++;
-                break;
-            case '-':
-                memory[dataptr]--;
-                break;
-            case '.':
-                std::cout.put(memory[dataptr]);
-                break;
-            case ',':
-                memory[dataptr] = std::cin.get();
-                break;
-            case '[':
-                if (memory[dataptr] == 0) {
-                    int bracket_nesting = 1;
-                    size_t saved_pc = pc;
-
-                    while (bracket_nesting && ++pc < p.instructions.size()) {
-                        if (p.instructions[pc] == ']') {
-                            bracket_nesting--;
-                        } else if (p.instructions[pc] == '[') {
-                            bracket_nesting++;
-                        }
-                    }
-
-                    if (!bracket_nesting) {
-                        break;
-                    } else {
-                        std::cerr << "Fatal: unmatched ']' at pc=" << saved_pc;
-                    }
-                }
-                break;
-            case ']':
-                if (memory[dataptr] != 0) {
-                    int bracket_nesting = 1;
-                    size_t saved_pc = pc;
-
-                    while (bracket_nesting && pc > 0) {
-                        pc--;
-                        if (p.instructions[pc] == '[') {
-                            bracket_nesting--;
-                        } else if (p.instructions[pc] == ']') {
-                            bracket_nesting++;
-                        }
-                    }
-
-                    if (!bracket_nesting) {
-                        break;
-                    } else {
-                        std::cerr << "Fatal: unmatched '[' at pc=" << saved_pc;
-                    }
-                }
-                break;
-            default:
-                std::cerr << "Fatal: bad char'" << insn << "'at pc=" << pc;
-                break;
-        }
-        pc++;
-    }
+std::unique_ptr<Executor> newExecutor() {
+    std::unique_ptr<Executor> executor(new Opt1Interpreter());
+    return executor;
 }
 
 int main(int argc, const char** argv) {
@@ -107,6 +32,8 @@ int main(int argc, const char** argv) {
 
     parse_command_line(argc, argv, &bf_file_path, &verbose);
 
+    std::unique_ptr<Executor> executor = newExecutor();
+
     std::ifstream file(bf_file_path);
     if (!file) {
         std::cerr << "Fatal: Unable to open file " << bf_file_path << std::endl;
@@ -114,6 +41,8 @@ int main(int argc, const char** argv) {
     }
     Timer t1;
     Program program = parse_from_stream(file);
+
+    executor->pre_execute_in_parsing_phase(program, verbose);
 
     if (verbose) {
         std::cout << "Parsing took: " << t1.elapsed() << "s\n";
@@ -126,7 +55,8 @@ int main(int argc, const char** argv) {
     }
 
     Timer t2;
-    simpleinterp(program, verbose);
+    //simpleinterp(program, verbose);
+    executor->execute(program, verbose);
 
     if (verbose) {
         std::cout << "\n[<] Done (elapsed: " << t2.elapsed() << "s)\n";
