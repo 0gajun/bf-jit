@@ -5,6 +5,8 @@
 #include <vector>
 #include <iostream>
 
+//#define BFTRACE
+
 class Opt1Interpreter : public Executor {
 public:
     Opt1Interpreter();

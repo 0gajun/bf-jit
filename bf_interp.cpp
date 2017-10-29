@@ -55,7 +55,6 @@ int main(int argc, const char** argv) {
     }
 
     Timer t2;
-    //simpleinterp(program, verbose);
     executor->execute(program, verbose);
 
     if (verbose) {

@@ -1,5 +1,9 @@
 #include "opt1_interp.h"
 
+#ifdef BFTRACE
+#include <unordered_map>
+#endif
+
 Opt1Interpreter::Opt1Interpreter() {}
 
 void Opt1Interpreter::compute_jumptable(const Program& p) {
@@ -9,6 +13,7 @@ void Opt1Interpreter::compute_jumptable(const Program& p) {
 
     while (pc < program_size) {
         char instruction = p.instructions[pc];
+
         if (instruction == '[') {
             int bracket_nesting = 1;
             size_t seek = pc;
@@ -45,8 +50,17 @@ void Opt1Interpreter::execute(const Program& p, bool verbose) {
     size_t pc = 0;
     size_t dataptr = 0;
 
+#ifdef BFTRACE
+    std::unordered_map<char, size_t> op_exec_count;
+#endif
+
     while (pc < p.instructions.size()) {
         char insn = p.instructions[pc];
+
+#ifdef BFTRACE
+        op_exec_count[insn]++;
+#endif
+
         switch (insn) {
             case '>':
                 dataptr++;
@@ -82,4 +96,15 @@ void Opt1Interpreter::execute(const Program& p, bool verbose) {
         }
         pc++;
     }
+
+#ifdef BFTRACE
+    std::cout << "* Tracing:\n";
+    std::cout.imbue(std::locale(""));
+    size_t total = 0;
+    for (auto i : op_exec_count) {
+        std::cout << i.first << "\t--> " << i.second << std::endl;
+        total += i.second;
+    }
+    std::cout << ".. Total: " << total << "\n";
+#endif
 }
