@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "opt1_interp.h"
+#include "opt2_interp.h"
 #include "simple_interp.h"
 #include <string>
 #include <iostream>
@@ -22,7 +23,7 @@ Program parse_from_stream(std::istream& stream) {
 }
 
 std::unique_ptr<Executor> newExecutor() {
-    std::unique_ptr<Executor> executor(new Opt1Interpreter());
+    std::unique_ptr<Executor> executor(new Opt2Interpreter());
     return executor;
 }
 

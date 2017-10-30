@@ -4,7 +4,7 @@ LDFLAGS =
 
 COMMONFILES = utils.cpp
 
-EXECUTORS = simple_interp.cpp opt1_interp.cpp
+EXECUTORS = simple_interp.cpp opt1_interp.cpp opt2_interp.cpp
 
 .PHONY: bf_interp
 bf_interp: $(COMMONFILES) $(EXECUTORS) bf_interp.cpp
