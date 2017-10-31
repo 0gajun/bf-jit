@@ -1,5 +1,6 @@
 #include "opt2_interp.h"
 #include <stack>
+#include <iomanip>
 
 #ifdef BFTRACE
 #include <unordered_map>
@@ -64,19 +65,19 @@ std::vector<BfOp> parse_bf_ops(const Program& p) {
     }
 
     pc = 0;
-    std::stack<size_t> block_map;
+    std::stack<size_t> block_stack;
 
     while (pc < ops.size()) {
         //std::cout << "pc: " << pc << ",\t kind=" << get_kind_str(ops[pc].kind) << ", \t arg=" << ops[pc].argument << std::endl;
         if (ops[pc].kind == BfOpKind::JUMP_IF_DATA_ZERO) {
-            block_map.push(pc);
+            block_stack.push(pc);
         }
         if (ops[pc].kind == BfOpKind::JUMP_IF_DATA_NOT_ZERO) {
-            size_t target_pc = block_map.top();
+            size_t target_pc = block_stack.top();
+            block_stack.pop();
             size_t offset = pc - target_pc;
             ops[pc].argument = offset;
             ops[target_pc].argument = offset;
-            block_map.pop();
         }
         pc++;
     }
@@ -94,14 +95,16 @@ void Opt2Interpreter::execute(const Program& p, bool verbose) {
     size_t dataptr = 0;
 
 #ifdef BFTRACE
-    std::unordered_map<std::string, size_t> op_exec_count;
+    std::unordered_map<int, size_t> op_exec_count;
+    std::string current_trace;
+    std::unordered_map<std::string, size_t> trace_count;
 #endif
 
     while (pc < bf_ops.size()) {
         const BfOp& op = bf_ops[pc];
 
 #ifdef BFTRACE
-        op_exec_count[get_kind_str(op.kind)]++;
+        op_exec_count[static_cast<int>(op.kind)]++;
 #endif
 
         switch (op.kind) {
@@ -118,18 +121,14 @@ void Opt2Interpreter::execute(const Program& p, bool verbose) {
                 memory[dataptr] -= op.argument;
                 break;
             case BfOpKind::WRITE_STDOUT:
-                if (op.argument != 1) {
-                    std::cerr << "Fatal: write stdout op, arg=" << op.argument << std::endl;
-                    exit(1);
+                for (size_t i = 0; i < op.argument; i++) {
+                    std::cout.put(memory[dataptr]);
                 }
-                std::cout.put(memory[dataptr]);
                 break;
             case BfOpKind::READ_STDIN:
-                if (op.argument != 1) {
-                    std::cerr << "Fatal: read stdin op" << op.argument << std::endl;
-                    exit(1);
+                for (size_t i = 0; i < op.argument; i++) {
+                    memory[dataptr] = std::cin.get();
                 }
-                memory[dataptr] = std::cin.get();
                 break;
             case BfOpKind::JUMP_IF_DATA_ZERO:
                 if (memory[dataptr] == 0) {
@@ -145,6 +144,17 @@ void Opt2Interpreter::execute(const Program& p, bool verbose) {
                 std::cerr << "Fatal: Unknown op at pc=" << pc;
                 break;
         }
+
+#ifdef BFTRACE
+        if (op.kind == BfOpKind::JUMP_IF_DATA_ZERO) {
+            current_trace = "";
+        } else if (op.kind == BfOpKind::JUMP_IF_DATA_NOT_ZERO) {
+            trace_count[current_trace]++;
+            current_trace = "";
+        } else {
+            current_trace += get_kind_char(op.kind) + std::to_string(op.argument);
+        }
+#endif
         pc++;
     }
 
@@ -157,7 +167,43 @@ void Opt2Interpreter::execute(const Program& p, bool verbose) {
         total += i.second;
     }
     std::cout << ".. Total: " << total << "\n";
+
+    std::pair<std::string, size_t> trace_pair;
+    std::vector<std::pair<std::string, size_t>> trace_pairs;
+    std::copy(trace_count.begin(), trace_count.end(),
+            std::back_inserter<std::vector<std::pair<std::string, size_t>>>(trace_pairs));
+    std::sort(trace_pairs.begin(), trace_pairs.end(),
+            [](const std::pair<std::string, size_t>& a, const std::pair<std::string, size_t>& b) {
+                return a.second > b.second;
+            });
+
+    for (auto const& p : trace_pairs) {
+        std::cout << std::setw(15) << std::left << p.first << " --> " << p.second << "\n";
+    }
 #endif
+}
+
+std::string get_kind_char(BfOpKind kind) {
+    switch (kind) {
+        case BfOpKind::INC_PTR:
+            return ">";
+        case BfOpKind::DEC_PTR:
+            return "<";
+        case BfOpKind::INC_DATA:
+            return "+";
+        case BfOpKind::DEC_DATA:
+            return "-";
+        case BfOpKind::WRITE_STDOUT:
+            return ".";
+        case BfOpKind::READ_STDIN:
+            return ",";
+        case BfOpKind::JUMP_IF_DATA_ZERO:
+            return "[";
+        case BfOpKind::JUMP_IF_DATA_NOT_ZERO:
+            return "]";
+        default:
+            return "?";
+    }
 }
 
 std::string get_kind_str(BfOpKind kind) {

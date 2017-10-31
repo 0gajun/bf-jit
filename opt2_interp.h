@@ -20,6 +20,7 @@ enum class BfOpKind {
 };
 
 std::string get_kind_str(BfOpKind kind);
+std::string get_kind_char(BfOpKind kind);
 
 struct BfOp {
     BfOp(BfOpKind kind, size_t argument_param) : kind(kind), argument(argument_param) {};
