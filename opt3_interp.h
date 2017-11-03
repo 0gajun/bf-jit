@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-#define BFTRACE
+//#define BFTRACE
 
 enum class BfOpKind {
     INVALID_OP = 0,
@@ -15,6 +15,9 @@ enum class BfOpKind {
     DEC_DATA,
     READ_STDIN,
     WRITE_STDOUT,
+    LOOP_SET_TO_ZERO,
+    LOOP_MOVE_PTR,
+    LOOP_MOVE_DATA,
     JUMP_IF_DATA_ZERO,
     JUMP_IF_DATA_NOT_ZERO,
 };
@@ -23,10 +26,10 @@ std::string get_kind_str(BfOpKind kind);
 std::string get_kind_char(BfOpKind kind);
 
 struct BfOp {
-    BfOp(BfOpKind kind, size_t argument_param) : kind(kind), argument(argument_param) {};
+    BfOp(BfOpKind kind, int64_t argument_param) : kind(kind), argument(argument_param) {};
 
     BfOpKind kind = BfOpKind::INVALID_OP;
-    size_t argument = 0;
+    int64_t argument = 0;
 };
 
 class Opt3Interpreter : public Executor {

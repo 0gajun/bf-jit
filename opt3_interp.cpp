@@ -17,10 +17,50 @@ size_t calculate_repeated_insn_count(const Program& p, size_t pc) {
     return c;
 }
 
+std::vector<BfOp> optimize_loop(const std::vector<BfOp>& ops, size_t loop_start) {
+    std::vector<BfOp> new_ops;
+
+    if (ops.size() - loop_start == 2) {
+        BfOp repeated_op = ops[loop_start + 1];
+        switch (repeated_op.kind) {
+        case BfOpKind::INC_DATA:
+        case BfOpKind::DEC_DATA:
+            new_ops.push_back(BfOp(BfOpKind::LOOP_SET_TO_ZERO, 0));
+            break;
+        case BfOpKind::INC_PTR:
+            new_ops.push_back(BfOp(BfOpKind::LOOP_MOVE_PTR, repeated_op.argument));
+            break;
+        case BfOpKind::DEC_PTR:
+            new_ops.push_back(BfOp(BfOpKind::LOOP_MOVE_PTR, -repeated_op.argument));
+            break;
+        default:
+            break;
+        }
+    } else if (ops.size() - loop_start == 5) {
+        if (ops[loop_start + 1].kind == BfOpKind::DEC_DATA
+                && ops[loop_start + 3].kind == BfOpKind::INC_DATA
+                && ops[loop_start + 1].argument == 1
+                && ops[loop_start + 3].argument == 1) {
+            if (ops[loop_start + 2].kind == BfOpKind::INC_PTR
+                    && ops[loop_start + 4].kind == BfOpKind::DEC_PTR
+                    && ops[loop_start + 2].argument == ops[loop_start + 4].argument) {
+                new_ops.push_back(BfOp(BfOpKind::LOOP_MOVE_DATA, ops[loop_start + 2].argument));
+            } else if (ops[loop_start + 2].kind == BfOpKind::DEC_PTR
+                    && ops[loop_start + 4].kind == BfOpKind::INC_PTR
+                    && ops[loop_start + 2].argument == ops[loop_start + 4].argument) {
+                new_ops.push_back(BfOp(BfOpKind::LOOP_MOVE_DATA, -ops[loop_start + 2].argument));
+            }
+        }
+    }
+    return new_ops;
+}
+
 std::vector<BfOp> parse_bf_ops(const Program& p) {
     std::vector<BfOp> ops;
 
     size_t pc = 0;
+
+    std::stack<size_t> loop_block_stack;
 
     while (pc < p.instructions.size()) {
         size_t repeated_count = calculate_repeated_insn_count(p, pc);
@@ -51,12 +91,26 @@ std::vector<BfOp> parse_bf_ops(const Program& p) {
                 pc += repeated_count;
                 break;
             case '[':
+                loop_block_stack.push(ops.size());
                 ops.push_back(BfOp(BfOpKind::JUMP_IF_DATA_ZERO, 0));
-                pc += 1;
+                pc++;
                 break;
             case ']':
-                ops.push_back(BfOp(BfOpKind::JUMP_IF_DATA_NOT_ZERO, 0));
-                pc += 1;
+                {
+                    size_t loop_start = loop_block_stack.top();
+                    loop_block_stack.pop();
+
+                    std::vector<BfOp> optimized_loop = optimize_loop(ops, loop_start);
+
+                    if (optimized_loop.empty()) {
+                        ops[loop_start].argument = ops.size();
+                        ops.push_back(BfOp(BfOpKind::JUMP_IF_DATA_NOT_ZERO, loop_start));
+                    } else {
+                        ops.erase(ops.begin() + loop_start, ops.end());
+                        ops.insert(ops.end(), optimized_loop.begin(), optimized_loop.end());
+                    }
+                    pc++;
+                }
                 break;
             default:
                 std::cerr << "Fatal: bad char'" << insn << "'at pc=" << pc;
@@ -64,23 +118,6 @@ std::vector<BfOp> parse_bf_ops(const Program& p) {
         }
     }
 
-    pc = 0;
-    std::stack<size_t> block_stack;
-
-    while (pc < ops.size()) {
-        //std::cout << "pc: " << pc << ",\t kind=" << get_kind_str(ops[pc].kind) << ", \t arg=" << ops[pc].argument << std::endl;
-        if (ops[pc].kind == BfOpKind::JUMP_IF_DATA_ZERO) {
-            block_stack.push(pc);
-        }
-        if (ops[pc].kind == BfOpKind::JUMP_IF_DATA_NOT_ZERO) {
-            size_t target_pc = block_stack.top();
-            block_stack.pop();
-            size_t offset = pc - target_pc;
-            ops[pc].argument = offset;
-            ops[target_pc].argument = offset;
-        }
-        pc++;
-    }
     return ops;
 }
 
@@ -130,18 +167,34 @@ void Opt3Interpreter::execute(const Program& p, bool verbose) {
                     memory[dataptr] = std::cin.get();
                 }
                 break;
+            case BfOpKind::LOOP_SET_TO_ZERO:
+                memory[dataptr] = 0;
+                break;
+            case BfOpKind::LOOP_MOVE_PTR:
+                while (memory[dataptr]) {
+                    dataptr += op.argument;
+                }
+                break;
+            case BfOpKind::LOOP_MOVE_DATA:
+                if (memory[dataptr]) {
+                    int64_t move_to_ptr = static_cast<int64_t>(dataptr) + op.argument;
+                    memory[move_to_ptr] += memory[dataptr];
+                    memory[dataptr] = 0;
+                }
+                break;
             case BfOpKind::JUMP_IF_DATA_ZERO:
                 if (memory[dataptr] == 0) {
-                    pc += op.argument;
+                    pc = op.argument;
                 }
                 break;
             case BfOpKind::JUMP_IF_DATA_NOT_ZERO:
                 if (memory[dataptr] != 0) {
-                    pc -= op.argument;
+                    pc = op.argument;
                 }
                 break;
             default:
                 std::cerr << "Fatal: Unknown op at pc=" << pc;
+                exit(1);
                 break;
         }
 
@@ -220,6 +273,12 @@ std::string get_kind_str(BfOpKind kind) {
             return "WRITE_STDOUT";
         case BfOpKind::READ_STDIN:
             return "READ_STDIN";
+        case BfOpKind::LOOP_SET_TO_ZERO:
+            return "LOOP_SET_TO_ZERO";
+        case BfOpKind::LOOP_MOVE_PTR:
+            return "LOOP_MOVE_PTR";
+        case BfOpKind::LOOP_MOVE_DATA:
+            return "LOOP_MOVE_DATA";
         case BfOpKind::JUMP_IF_DATA_ZERO:
             return "JUMP_IF_DATA_ZERO";
         case BfOpKind::JUMP_IF_DATA_NOT_ZERO:

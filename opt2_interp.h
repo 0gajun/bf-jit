@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-#define BFTRACE
+//#define BFTRACE
 
 enum class BfOpKind {
     INVALID_OP = 0,
