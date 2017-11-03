@@ -1,11 +1,24 @@
 #include "utils.h"
-#include "opt1_interp.h"
-#include "opt2_interp.h"
-#include "simple_interp.h"
+#include "executor.h"
 #include <string>
 #include <iostream>
 #include <fstream>
 #include <vector>
+
+// // #define SIMPLE
+// // #define OPT1
+// // #define OPT2
+// #define OPT3
+
+#ifdef SIMPLE
+#include "simple_interp.h"
+#elif defined OPT1
+#include "opt1_interp.h"
+#elif defined OPT2
+#include "opt2_interp.h"
+#elif defined OPT3
+#include "opt3_interp.h"
+#endif
 
 Program parse_from_stream(std::istream& stream) {
     Program program;
@@ -22,8 +35,22 @@ Program parse_from_stream(std::istream& stream) {
     return program;
 }
 
+Executor* __newExecutorImpl() {
+#ifdef SIMPLE
+    return new SimpleInterpreter();
+#elif defined OPT1
+    return new Opt1Interpreter()
+#elif defined OPT2
+    return new Opt2Interpreter();
+#elif defined OPT3
+    return new Opt3Interpreter();
+#else
+    abort();
+#endif
+}
+
 std::unique_ptr<Executor> newExecutor() {
-    std::unique_ptr<Executor> executor(new Opt2Interpreter());
+    std::unique_ptr<Executor> executor(__newExecutorImpl());
     return executor;
 }
 

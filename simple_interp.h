@@ -7,7 +7,7 @@
 
 class SimpleInterpreter : public Executor {
 public:
-    SimpleInterpreter();
+    SimpleInterpreter() {};
     void pre_execute_in_parsing_phase(const Program& p, bool verbose) override {};
     void execute(const Program& p, bool verbose) override;
 };
