@@ -4,11 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
-
-// // #define SIMPLE
-// // #define OPT1
-// // #define OPT2
-// #define OPT3
+#include <memory>
 
 #ifdef SIMPLE
 #include "simple_interp.h"
@@ -18,6 +14,8 @@
 #include "opt2_interp.h"
 #elif defined OPT3
 #include "opt3_interp.h"
+#elif defined SIMPLE_JIT
+#include "simple_jit.h"
 #endif
 
 Program parse_from_stream(std::istream& stream) {
@@ -44,6 +42,8 @@ Executor* __newExecutorImpl() {
     return new Opt2Interpreter();
 #elif defined OPT3
     return new Opt3Interpreter();
+#elif defined SIMPLE_JIT
+    return new SimpleJit();
 #else
     abort();
 #endif
