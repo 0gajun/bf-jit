@@ -4,7 +4,9 @@ LDFLAGS =
 
 COMMONFILES = utils.cpp bf_interp.cpp jit_utils.cpp
 
-.PHONY: bf_simple bf_opt1 bf_opt2 bf_opt3
+BINS = bf_simple bf_opt1 bf_opt2 bf_opt3 bf_simple_jit
+
+.PHONY: $(BINS)
 
 bf_simple: $(COMMONFILES) simple_interp.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DSIMPLE $^ -o $@
@@ -20,3 +22,6 @@ bf_opt3: $(COMMONFILES) opt3_interp.cpp
 
 bf_simple_jit: $(COMMONFILES) simple_jit.cpp
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -DSIMPLE_JIT $^ -o $@
+
+clean:
+	rm -rf $(BINS) *.dSYM
