@@ -31,4 +31,4 @@ target_compile_definitions(bf_simple_jit PRIVATE SIMPLE_JIT)
 
 add_executable(bf_simple_asmjit ${SRC_COMMON} simple_asmjit.cpp)
 target_link_libraries(bf_simple_asmjit ${ASMJIT_LIB})
-target_compile_definitions(bf_simple_jit PRIVATE SIMPLE_JIT)
+target_compile_definitions(bf_simple_asmjit PRIVATE SIMPLE_ASMJIT)
