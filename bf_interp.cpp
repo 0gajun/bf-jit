@@ -37,7 +37,7 @@ Executor* __newExecutorImpl() {
 #ifdef SIMPLE
     return new SimpleInterpreter();
 #elif defined OPT1
-    return new Opt1Interpreter()
+    return new Opt1Interpreter();
 #elif defined OPT2
     return new Opt2Interpreter();
 #elif defined OPT3

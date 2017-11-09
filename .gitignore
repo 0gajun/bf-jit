@@ -1,10 +1,4 @@
-bf_interp
-bf_simple
-bf_opt1
-bf_opt2
-bf_opt3
-bf_simple_jit
-*.dSYM
+build/
 
 ### https://raw.github.com/github/gitignore/20cd385794419463136c26d8e76c754fbf2d0678/c++.gitignore
 
