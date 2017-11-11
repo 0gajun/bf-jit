@@ -18,6 +18,8 @@
 #include "simple_jit.h"
 #elif defined SIMPLE_ASMJIT
 #include "simple_asmjit.h"
+#elif defined OPT_ASMJIT
+#include "opt_asmjit.h"
 #endif
 
 Program parse_from_stream(std::istream& stream) {
@@ -48,6 +50,8 @@ Executor* __newExecutorImpl() {
     return new SimpleJit();
 #elif defined SIMPLE_ASMJIT
     return new SimpleAsmjit();
+#elif defined OPT_ASMJIT
+    return new OptAsmjit();
 #else
     std::cerr << "Cannot Infrate Executor Impl. Don't you forget set correct variable? (e.g. -DSIMPLE)\n";
     abort();
