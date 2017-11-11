@@ -140,7 +140,6 @@ void OptAsmjit::pre_execute_in_parsing_phase(const Program& p, bool verbose) {
 }
 
 void OptAsmjit::execute(const Program& p, bool verbose) {
-    std::vector<uint8_t> memory(MEMORY_SIZE, 0);
     asmjit::JitRuntime rt;
     asmjit::CodeHolder code;
     code.init(rt.getCodeInfo());
@@ -210,9 +209,6 @@ void OptAsmjit::execute(const Program& p, bool verbose) {
                     } else {
                       assm.add(asmjit::x86::r14, op.argument);
                     }
-                    // Use rax as a temporary holding the value of at the original pointer;
-                    // then use al to add it to the new location, so that only the target
-                    // location is affected: addb %al, 0(%r13)
                     assm.mov(asmjit::x86::rax, asmjit::x86::byte_ptr(dataptr));
                     assm.add(asmjit::x86::byte_ptr(asmjit::x86::r14), asmjit::x86::al);
                     assm.mov(asmjit::x86::byte_ptr(dataptr), 0);
@@ -269,6 +265,7 @@ void OptAsmjit::execute(const Program& p, bool verbose) {
         exit(1);
     }
 
+    std::vector<uint8_t> memory(MEMORY_SIZE, 0);
     func((uint64_t) memory.data());
 
     std::cout << "successfully finished" << std::endl;

@@ -6,7 +6,7 @@ set(CMAKE_CXX_COMPILER "clang++")
 project(bf-jit)
 add_definitions("-std=c++11")
 add_definitions("-Wall")
-add_definitions("-O1")
+add_definitions("-O2")
 add_definitions("-g")
 
 set(SRC_COMMON utils.cpp bf_interp.cpp jit_utils.cpp)
